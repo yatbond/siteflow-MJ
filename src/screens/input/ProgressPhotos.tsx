@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useWeatherOptions } from '@/hooks/useWeatherOptions';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface PhotoPreview {
   file: File;
@@ -12,7 +13,7 @@ export default function ProgressPhotos() {
   const location = useLocation();
   const prev = location.state || {};
 
-  const { weatherOptions } = useWeatherOptions();
+  const [weatherOptions, setWeatherOptions] = useState<any[]>([]);
   const [selectedWeather, setSelectedWeather] = useState<string>('');
   const [temperature, setTemperature] = useState<string>('');
   const [workDone, setWorkDone] = useState('');
@@ -27,6 +28,12 @@ export default function ProgressPhotos() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const MAX_PHOTOS = 5;
+
+  useEffect(() => {
+    getDocs(query(collection(db, 'weatherOptions'), where('active', '==', true)))
+      .then(snap => setWeatherOptions(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, []);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

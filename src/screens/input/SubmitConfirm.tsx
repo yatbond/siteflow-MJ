@@ -33,7 +33,8 @@ export default function SubmitConfirm() {
           updatedAt: new Date().toISOString(),
         };
 
-        const reportRef = await setDoc(doc(collection(db, 'reports')), reportData);
+        const reportRef = doc(collection(db, 'reports'));
+        await setDoc(reportRef, reportData);
         setSubmitted(true);
       } catch (err: any) {
         setError(err.message || 'Submit failed');
