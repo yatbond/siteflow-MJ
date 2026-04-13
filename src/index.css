@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+/* SiteFlow Industrial Theme */
+@theme {
+  /* Industrial color palette - high contrast for outdoor use */
+  --color-siteflow-primary: oklch(0.65 0.18 180); /* Teal - user's favorite */
+  --color-siteflow-primary-dark: oklch(0.50 0.15 180);
+  --color-siteflow-danger: oklch(0.60 0.20 25);
+  --color-siteflow-warning: oklch(0.75 0.15 85);
+  --color-siteflow-success: oklch(0.70 0.15 150);
+  
+  /* Industrial UI - sunlight readable */
+  --color-siteflow-surface-dark: oklch(0.20 0.02 280);
+  --color-siteflow-surface-light: oklch(0.98 0.01 280);
+  
+  /* Touch targets - minimum 48px */
+  --size-siteflow-touch: 3rem;
+  
+  /* Large fonts for outdoor use */
+  --text-base-size: 18px;
+  --text-lg-size: 20px;
+  --text-xl-size: 24px;
+}
+
+/* Dark mode defaults */
+:root {
+  color-scheme: dark;
+}
+
+:root:not(.dark) {
+  color-scheme: light;
+}
+
+/* Ensure minimum touch target size */
+button, a, input, select, [role="button"] {
+  min-height: var(--size-siteflow-touch);
+  min-width: var(--size-siteflow-touch);
+}
+
+/* Sunlight-readable contrast */
+.dark {
+  --bg-primary: var(--color-siteflow-surface-dark);
+  --text-primary: white;
+}
+
+:not(.dark) {
+  --bg-primary: var(--color-siteflow-surface-light);
+  --text-primary: black;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--text-base-size);
+}
