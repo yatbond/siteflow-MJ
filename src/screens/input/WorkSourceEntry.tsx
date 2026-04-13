@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
-import { db as dexieDb } from '@/db/dexie';
 import { useLaborRoles } from '@/hooks/useLaborRoles';
 
 interface LaborEntry {
@@ -12,7 +11,7 @@ interface LaborEntry {
 export default function WorkSourceEntry() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { draftId } = location.state || {};
+  const { siteId, tradeId, workDate, workFront } = location.state || {};
   
   const { laborRoles, categories, getRolesByCategory } = useLaborRoles();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -55,17 +54,15 @@ export default function WorkSourceEntry() {
     setError('');
 
     try {
-      if (draftId) {
-        const draft = await dexieDb.draftReports.get(draftId);
-        if (draft) {
-          await dexieDb.draftReports.update(draftId, {
-            data: { ...draft.data, labor: laborEntries },
-            updatedAt: new Date().toISOString(),
-          });
-        }
-      }
-
-      navigate('/input/resources', { state: { draftId } });
+      navigate('/input/resources', { 
+        state: { 
+          siteId, 
+          tradeId, 
+          workDate, 
+          workFront,
+          labor: laborEntries 
+        } 
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to save');
     } finally {

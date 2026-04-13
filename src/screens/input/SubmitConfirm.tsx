@@ -1,30 +1,39 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { db as dexieDb } from '@/db/dexie';
+import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/features/auth/AuthContext';
 
 export default function SubmitConfirm() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { draftId } = (location.state || {}) as { draftId?: number };
+  const { user } = useAuth();
+  const { siteId, tradeId, workDate, workFront, workSource, labor, plant, progress } = location.state || {};
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!draftId || submitted) return;
+    if (!siteId || submitted) return;
 
-    // Auto-submit on mount (simulate Firebase upload)
     const doSubmit = async () => {
       try {
-        const draft = await dexieDb.draftReports.get(draftId);
-        if (!draft) throw new Error('Draft not found');
-
-        // In real app: upload photos to Firebase Storage, then write report to Firestore
-        // For now: mark as submitted in IndexedDB
-        await dexieDb.draftReports.update(draftId, {
+        const reportData = {
+          userId: user!.uid,
+          siteId,
+          tradeId,
+          workDate,
+          workFront,
+          workSource,
+          labor,
+          plant,
+          progress,
           status: 'submitted',
           submittedAt: new Date().toISOString(),
-        });
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
 
+        const reportRef = await setDoc(doc(collection(db, 'reports')), reportData);
         setSubmitted(true);
       } catch (err: any) {
         setError(err.message || 'Submit failed');
@@ -32,7 +41,7 @@ export default function SubmitConfirm() {
     };
 
     doSubmit();
-  }, [draftId, submitted]);
+  }, [siteId, submitted, user, tradeId, workDate, workFront, workSource, labor, plant, progress]);
 
   if (error) {
     return (
@@ -67,7 +76,7 @@ export default function SubmitConfirm() {
         <div className="text-center">
           <div className="text-5xl animate-pulse mb-4">📤</div>
           <h2 className="text-2xl font-bold">Submitting report...</h2>
-          <p className="text-gray-400 mt-2">Uploading photos & saving data</p>
+          <p className="text-gray-400 mt-2">Saving to Firebase</p>
         </div>
       </div>
     );

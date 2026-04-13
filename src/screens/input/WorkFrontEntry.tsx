@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
-import { db as dexieDb } from '@/db/dexie';
 
 export default function WorkFrontEntry() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { draftId } = location.state || {};
+  const { siteId, tradeId, workDate } = location.state || {};
   
   const [workFront, setWorkFront] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Mock work front history (in real app, fetch from Firestore)
   const workFrontHistory = [
     'Tower 1 - Level 10',
     'Tower 1 - Level 11',
@@ -52,18 +50,14 @@ export default function WorkFrontEntry() {
     setError('');
 
     try {
-      // Update draft in IndexedDB
-      if (draftId) {
-        const draft = await dexieDb.draftReports.get(draftId);
-        if (draft) {
-          await dexieDb.draftReports.update(draftId, {
-            data: { ...draft.data, workFront },
-            updatedAt: new Date().toISOString(),
-          });
-        }
-      }
-
-      navigate('/input/work-source', { state: { draftId } });
+      navigate('/input/work-source', { 
+        state: { 
+          siteId, 
+          tradeId, 
+          workDate, 
+          workFront 
+        } 
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to save');
     } finally {

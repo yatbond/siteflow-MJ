@@ -1,36 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { db as dexieDb } from '@/db/dexie';
-import type { DraftReport } from '@/db/dexie';
 
 export default function FinalOutput() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { draftId } = (location.state || {}) as { draftId?: string };
-  const [draft, setDraft] = useState<DraftReport | null>(null);
+  const { siteId, tradeId, workDate, workFront, workSource, labor, plant, progress } = location.state || {};
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (draftId) {
-      dexieDb.draftReports.get(draftId).then((d) => {
-        if (d) setDraft(d);
-      });
-    }
-  }, [draftId]);
 
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
 
     try {
-      if (draftId) {
-        await dexieDb.draftReports.update(draftId, {
-          status: 'pending_submit',
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      navigate('/input/submit', { state: { draftId } });
+      navigate('/input/submit', { 
+        state: { 
+          siteId, 
+          tradeId, 
+          workDate, 
+          workFront,
+          workSource,
+          labor, 
+          plant, 
+          progress 
+        } 
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to submit');
     } finally {
@@ -38,18 +32,7 @@ export default function FinalOutput() {
     }
   };
 
-  if (!draft) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
-        <p className="text-xl text-gray-400">Loading report...</p>
-      </div>
-    );
-  }
-
-  const data = draft.data || {};
-  const labor = (data.labor as any[]) || [];
-  const plant = (data.plant as any[]) || [];
-  const progress = (data.progress as any) || {};
+  const laborCount = labor?.reduce((sum: number, l: any) => sum + (l.count || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -80,33 +63,33 @@ export default function FinalOutput() {
             <div className="grid grid-cols-2 gap-4 text-lg">
               <div>
                 <p className="text-gray-400 text-sm">Date</p>
-                <p className="font-bold">{draft.workDate}</p>
+                <p className="font-bold">{workDate}</p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm">Site</p>
-                <p className="font-bold">{draft.siteId}</p>
+                <p className="font-bold">{siteId}</p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm">Trade</p>
-                <p className="font-bold">{draft.tradeId}</p>
+                <p className="font-bold">{tradeId}</p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm">Work Front</p>
-                <p className="font-bold">{data.workFront || '—'}</p>
+                <p className="font-bold">{workFront || '—'}</p>
               </div>
             </div>
           </section>
 
           {/* Labor */}
           <section className="p-5 bg-gray-800 rounded-xl">
-            <h3 className="text-lg font-bold text-teal-400 mb-2">👥 Labor ({labor.length} roles)</h3>
+            <h3 className="text-lg font-bold text-teal-400 mb-2">👥 Labor ({labor?.length || 0} roles)</h3>
             <p className="text-2xl font-bold">
-              {labor.reduce((sum: number, l: any) => sum + (l.count || 0), 0)} workers total
+              {laborCount} workers total
             </p>
           </section>
 
           {/* Plant */}
-          {plant.length > 0 && (
+          {plant?.length > 0 && (
             <section className="p-5 bg-gray-800 rounded-xl">
               <h3 className="text-lg font-bold text-teal-400 mb-2">🚜 Equipment ({plant.length})</h3>
               <div className="space-y-1">
@@ -120,15 +103,15 @@ export default function FinalOutput() {
           {/* Progress */}
           <section className="p-5 bg-gray-800 rounded-xl">
             <h3 className="text-lg font-bold text-teal-400 mb-2">📝 Progress</h3>
-            {progress.noWork ? (
+            {progress?.noWork ? (
               <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg">
                 <p className="text-red-300 font-bold">🚫 No Work — {progress.noWorkReason}</p>
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-lg">{progress.workDone || 'No description'}</p>
-                <p className="text-teal-400 font-bold">Completion: {progress.completionPercent || 0}%</p>
-                {progress.safetyIncident && (
+                <p className="text-lg">{progress?.workDone || 'No description'}</p>
+                <p className="text-teal-400 font-bold">Completion: {progress?.completionPercent || 0}%</p>
+                {progress?.safetyIncident && (
                   <div className="p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg">
                     <p className="text-yellow-300">⚠️ Safety: {progress.safetyIncident}</p>
                   </div>
@@ -138,7 +121,7 @@ export default function FinalOutput() {
           </section>
 
           {/* Photos */}
-          {progress.photoCount > 0 && (
+          {progress?.photoCount > 0 && (
             <section className="p-5 bg-gray-800 rounded-xl">
               <h3 className="text-lg font-bold text-teal-400 mb-2">📷 {progress.photoCount} Photo(s)</h3>
               <p className="text-gray-400">Photos will be uploaded on submit</p>
@@ -160,7 +143,7 @@ export default function FinalOutput() {
             {loading ? 'Submitting...' : '✅ Submit Report'}
           </button>
           <button
-            onClick={() => navigate('/input/progress', { state: { draftId } })}
+            onClick={() => navigate('/input/progress', { state: { siteId, tradeId, workDate, workFront, workSource, labor, plant, progress } })}
             className="w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-lg"
           >
             ✏️ Edit Report

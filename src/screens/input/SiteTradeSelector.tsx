@@ -62,31 +62,15 @@ export default function SiteTradeSelector() {
     setError('');
 
     try {
-      // Create draft report in Firestore
-      const draftRef = await import('firebase/firestore').then(({ doc, setDoc }) => {
-        const id = crypto.randomUUID();
-        return setDoc(doc(db, 'draftReports', id), {
-          userId: user!.uid,
-          siteId: selectedSite,
-          tradeId: selectedTrade,
-          workDate,
-          status: 'draft',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          data: {},
-        }).then(() => id);
-      });
-
       navigate('/input/work-front', {
         state: {
-          draftId: draftRef,
           siteId: selectedSite,
           tradeId: selectedTrade,
           workDate,
         },
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to create draft');
+      setError(err.message || 'Failed to continue');
     } finally {
       setLoading(false);
     }
