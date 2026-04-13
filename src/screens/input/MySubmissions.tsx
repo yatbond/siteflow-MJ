@@ -1,14 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
-import { db as dexieDb } from '@/db/dexie';
-import type { DraftReport } from '@/db/dexie';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface Report {
+  id: string;
+  userId: string;
+  siteId: string;
+  tradeId: string;
+  workDate: string;
+  workFront?: string;
+  status: string;
+  submittedAt?: string;
+  createdAt: string;
+  labor?: any[];
+  plant?: any[];
+  progress?: any;
+}
 
 export default function MySubmissions() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [reports, setReports] = useState<DraftReport[]>([]);
-  const [filter, setFilter] = useState<'all' | 'draft' | 'submitted'>('all');
+  const [reports, setReports] = useState<Report[]>([]);
+  const [filter, setFilter] = useState<'all' | 'submitted'>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,14 +35,15 @@ export default function MySubmissions() {
     setLoading(true);
 
     try {
-      let query = dexieDb.draftReports.where('userId').equals(user.uid);
-      let all = await query.toArray();
-
-      // Sort by date descending
-      all.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const snap = await getDocs(query(
+        collection(db, 'reports'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      ));
+      let all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Report));
 
       if (filter !== 'all') {
-        all = all.filter((r) => r.status === filter);
+        all = all.filter(r => r.status === filter);
       }
 
       setReports(all);
@@ -40,95 +56,82 @@ export default function MySubmissions() {
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { color: string; label: string }> = {
-      draft: { color: 'bg-gray-600', label: 'Draft' },
-      pending_submit: { color: 'bg-yellow-600', label: 'Submitting' },
       submitted: { color: 'bg-teal-600', label: 'Submitted' },
       adopted: { color: 'bg-green-600', label: 'Adopted' },
       duplicate: { color: 'bg-orange-600', label: 'Duplicate' },
       excluded: { color: 'bg-red-600', label: 'Excluded' },
     };
     const badge = badges[status] || { color: 'bg-gray-600', label: status };
+
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-bold ${badge.color}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-bold ${badge.color}`}>
         {badge.label}
       </span>
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+        <div className="text-center">
+          <div className="text-4xl animate-pulse mb-4">📜</div>
+          <p>Loading submissions...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <header className="p-4 border-b border-gray-700 flex justify-between items-center">
         <h1 className="text-2xl font-bold">📜 My Submissions</h1>
-        <button
-          onClick={() => navigate('/input/site-trade')}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg"
-        >
-          ➕ New
-        </button>
+        <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg">← Back</button>
       </header>
 
       <main className="p-4 max-w-2xl mx-auto">
-        {/* Filter Tabs */}
+        {/* Filters */}
         <div className="flex gap-2 mb-6">
-          {(['all', 'draft', 'submitted'] as const).map((f) => (
+          {(['all', 'submitted'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg capitalize ${filter === f ? 'bg-teal-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              className={`px-4 py-2 rounded-lg font-bold ${filter === f ? 'bg-teal-600' : 'bg-gray-700'}`}
             >
-              {f}
+              {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
 
         {/* Reports List */}
-        {loading ? (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-4xl animate-pulse mb-4">📋</div>
-            <p>Loading reports...</p>
-          </div>
-        ) : reports.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-4xl mb-4">📭</div>
-            <p className="text-xl mb-2">No reports yet</p>
-            <p className="text-sm">Start your first daily report!</p>
-            <button
-              onClick={() => navigate('/input/site-trade')}
-              className="mt-6 px-6 py-3 bg-teal-600 hover:bg-teal-700 rounded-lg text-lg"
-            >
-              ➕ Create Report
+        {reports.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">📋</div>
+            <h2 className="text-xl font-bold mb-2">No Reports Yet</h2>
+            <p className="text-gray-400 mb-6">Submit your first daily report!</p>
+            <button onClick={() => navigate('/input/site-trade')} className="px-6 py-3 bg-teal-600 hover:bg-teal-700 rounded-lg font-bold">
+              ➕ New Report
             </button>
           </div>
         ) : (
           <div className="space-y-3">
             {reports.map((report) => (
-              <div
-                key={report.id}
-                className="p-4 bg-gray-800 rounded-xl border border-gray-700"
-              >
+              <div key={report.id} className="p-4 bg-gray-800 rounded-xl">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="text-lg font-bold">{report.workDate}</p>
+                    <p className="font-bold text-lg">{report.workDate}</p>
                     <p className="text-gray-400 text-sm">
                       {report.siteId} • {report.tradeId}
                     </p>
+                    {report.workFront && (
+                      <p className="text-gray-500 text-sm">📍 {report.workFront}</p>
+                    )}
                   </div>
                   {getStatusBadge(report.status)}
                 </div>
-                {report.data?.workFront && (
-                  <p className="text-gray-300 text-sm">📍 {report.data.workFront as string}</p>
-                )}
-                <p className="text-gray-500 text-xs mt-2">
-                  Updated: {new Date(report.updatedAt).toLocaleString('en-HK', { timeZone: 'Asia/Hong_Kong' })}
-                </p>
-                {report.status === 'draft' && (
-                  <button
-                    onClick={() => navigate('/input/work-front', { state: { draftId: report.id } })}
-                    className="mt-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg text-sm"
-                  >
-                    ✏️ Continue
-                  </button>
-                )}
+                <div className="flex gap-4 text-sm text-gray-400">
+                  <span>👥 {report.labor?.length || 0} roles</span>
+                  <span>🚜 {report.plant?.length || 0} equipment</span>
+                </div>
               </div>
             ))}
           </div>
@@ -137,14 +140,10 @@ export default function MySubmissions() {
         {/* Stats */}
         <div className="mt-8 p-4 bg-gray-800 rounded-xl">
           <h3 className="text-lg font-bold mb-3">📊 Quick Stats</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <p className="text-3xl font-bold text-teal-400">{reports.filter((r) => r.status === 'submitted').length}</p>
+              <p className="text-3xl font-bold text-teal-400">{reports.filter(r => r.status === 'submitted').length}</p>
               <p className="text-sm text-gray-400">Submitted</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-yellow-400">{reports.filter((r) => r.status === 'draft').length}</p>
-              <p className="text-sm text-gray-400">Drafts</p>
             </div>
             <div>
               <p className="text-3xl font-bold text-gray-400">{reports.length}</p>
