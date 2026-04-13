@@ -16,6 +16,7 @@ export default function ResourceLog() {
   const prev = location.state || {};
   
   const [plantCatalog, setPlantCatalog] = useState<any[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string>('');
   const [plantEntries, setPlantEntries] = useState<PlantEntry[]>([]);
   const [constraints, setConstraints] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,12 +28,18 @@ export default function ResourceLog() {
       .catch(() => {});
   }, []);
 
-  const handleAddPlant = () => {
-    setPlantEntries([...plantEntries, { plantId: '', brand: '', model: '', hours: 0 }]);
+  const brands = Array.from(new Set(plantCatalog.map(p => p.brand))).sort();
+  const modelsForBrand = selectedBrand ? plantCatalog.filter(p => p.brand === selectedBrand) : [];
+
+  const handleAddPlant = (plantId: string) => {
+    const plant = plantCatalog.find(p => p.id === plantId);
+    if (plant) {
+      setPlantEntries([...plantEntries, { plantId: plant.id, brand: plant.brand || '', model: plant.model || '', hours: 0 }]);
+    }
   };
 
-  const handleUpdatePlant = (index: number, field: string, value: any) => {
-    setPlantEntries(plantEntries.map((p, i) => i === index ? { ...p, [field]: value } : p));
+  const handleUpdateHours = (index: number, hours: number) => {
+    setPlantEntries(plantEntries.map((p, i) => i === index ? { ...p, hours } : p));
   };
 
   const handleRemovePlant = (index: number) => {
@@ -77,29 +84,37 @@ export default function ResourceLog() {
         {/* Plant/Equipment */}
         <section className="mb-6 p-6 bg-gray-800 rounded-xl">
           <h2 className="text-xl font-bold mb-4">🚜 Equipment ({plantEntries.length})</h2>
-          {plantCatalog.length > 0 && (
-            <div className="mb-3">
-              <select onChange={(e) => {
-                const plant = plantCatalog.find(p => p.id === e.target.value);
-                if (plant) {
-                  setPlantEntries([...plantEntries, { plantId: plant.id, brand: plant.brand || '', model: plant.model || '', hours: 0 }]);
-                  e.target.value = '';
-                }
-              }} className="w-full p-3 bg-gray-700 rounded-lg mb-3">
-                <option value="">+ Select from catalog...</option>
-                {plantCatalog.map(p => <option key={p.id} value={p.id}>{p.brand} {p.model} ({p.type})</option>)}
-              </select>
+          
+          {/* Brand selector */}
+          <select value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg mb-3">
+            <option value="">Select Brand</option>
+            {brands.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+
+          {/* Model selector */}
+          {selectedBrand && (
+            <select onChange={(e) => { if (e.target.value) { handleAddPlant(e.target.value); e.target.value = ''; } }} className="w-full p-3 bg-gray-700 rounded-lg mb-3" defaultValue="">
+              <option value="">Select Model</option>
+              {modelsForBrand.map(p => (
+                <option key={p.id} value={p.id}>{p.model} ({p.type || 'General'})</option>
+              ))}
+            </select>
+          )}
+
+          {/* Selected equipment list */}
+          {plantEntries.length > 0 && (
+            <div className="space-y-2 mt-4">
+              {plantEntries.map((p, i) => (
+                <div key={i} className="flex gap-2 items-center bg-gray-700 p-3 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-bold">{p.brand} {p.model}</p>
+                  </div>
+                  <input type="number" placeholder="Hours" value={p.hours || ''} onChange={(e) => handleUpdateHours(i, parseFloat(e.target.value) || 0)} className="w-24 p-2 bg-gray-600 rounded-lg text-center" />
+                  <button onClick={() => handleRemovePlant(i)} className="p-2 bg-red-600 rounded-lg text-sm">✕</button>
+                </div>
+              ))}
             </div>
           )}
-          {plantEntries.map((p, i) => (
-            <div key={i} className="flex gap-2 mb-3 items-center">
-              <input placeholder="Brand" value={p.brand} onChange={(e) => handleUpdatePlant(i, 'brand', e.target.value)} className="flex-1 p-3 bg-gray-700 rounded-lg" />
-              <input placeholder="Model" value={p.model} onChange={(e) => handleUpdatePlant(i, 'model', e.target.value)} className="flex-1 p-3 bg-gray-700 rounded-lg" />
-              <input type="number" placeholder="Hours" value={p.hours || ''} onChange={(e) => handleUpdatePlant(i, 'hours', parseFloat(e.target.value) || 0)} className="w-20 p-3 bg-gray-700 rounded-lg" />
-              <button onClick={() => handleRemovePlant(i)} className="p-3 bg-red-600 rounded-lg">✕</button>
-            </div>
-          ))}
-          <button onClick={handleAddPlant} className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg hover:border-teal-500">+ Add Equipment</button>
         </section>
 
         {/* Constraints */}

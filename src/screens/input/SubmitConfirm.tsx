@@ -17,16 +17,18 @@ export default function SubmitConfirm() {
 
     const doSubmit = async () => {
       try {
+        if (!user) throw new Error('Not authenticated');
+
         const reportData = {
-          userId: user!.uid,
+          userId: user.uid,
           siteId,
           tradeId,
           workDate,
-          workFront,
-          workSource,
-          labor,
-          plant,
-          progress,
+          workFront: workFront || '',
+          workSource: workSource || '',
+          labor: labor || [],
+          plant: plant || [],
+          progress: progress || {},
           status: 'submitted',
           submittedAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -37,6 +39,7 @@ export default function SubmitConfirm() {
         await setDoc(reportRef, reportData);
         setSubmitted(true);
       } catch (err: any) {
+        console.error('[Submit] Error:', err);
         setError(err.message || 'Submit failed');
       }
     };
