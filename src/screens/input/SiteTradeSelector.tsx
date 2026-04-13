@@ -8,14 +8,18 @@ import type { DraftReport } from '@/db/dexie';
 export default function SiteTradeSelector() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [sites, setSites] = Array.from(dexieDb.sites.where('active').equals(true));
+  const [sites, setSites] = useState<Array<{id: string; projectName: string; siteName: string}>>([]);
   const [selectedSite, setSelectedSite] = useState<string>('');
   const [selectedTrade, setSelectedTrade] = useState<string>('');
   const [workDate, setWorkDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Get today's date in YYYY-MM-DD format
+  // Load sites from Dexie
+  useEffect(() => {
+    dexieDb.sites.where('active').equals(1).toArray().then(setSites).catch(() => {});
+  }, []);
+
   const today = new Date().toISOString().split('T')[0];
 
   const handleContinue = async () => {
