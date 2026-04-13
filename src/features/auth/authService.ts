@@ -92,7 +92,7 @@ export async function resetLockout(uid: string): Promise<void> {
 
 // Validate corporate email domain
 export function isValidCorporateEmail(email: string): boolean {
-  const allowedDomains = ['chunwo.com', 'asiaalliedgroup.com'];
+  const allowedDomains = ['chunwo.com', 'asiaalliedgroup.com', 'siteflow.com'];
   const domain = email.split('@')[1]?.toLowerCase();
   return allowedDomains.includes(domain);
 }
