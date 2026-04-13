@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface PhotoPreview {
@@ -30,9 +30,13 @@ export default function ProgressPhotos() {
   const MAX_PHOTOS = 5;
 
   useEffect(() => {
-    getDocs(query(collection(db, 'weatherOptions'), where('active', '==', true)))
-      .then(snap => setWeatherOptions(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => {});
+    getDocs(collection(db, 'weatherOptions'))
+      .then(snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const active = items.filter((w: any) => w.active === true);
+        setWeatherOptions(active.length > 0 ? active : items);
+      })
+      .catch(console.error);
   }, []);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

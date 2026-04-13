@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/features/auth/AuthContext';
 
@@ -35,8 +35,7 @@ export default function SubmitConfirm() {
           updatedAt: new Date().toISOString(),
         };
 
-        const reportRef = doc(collection(db, 'reports'));
-        await setDoc(reportRef, reportData);
+        await addDoc(collection(db, 'reports'), reportData);
         setSubmitted(true);
       } catch (err: any) {
         console.error('[Submit] Error:', err);

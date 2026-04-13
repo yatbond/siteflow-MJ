@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface PlantEntry {
@@ -23,9 +23,13 @@ export default function ResourceLog() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getDocs(query(collection(db, 'plantCatalog'), where('active', '==', true)))
-      .then(snap => setPlantCatalog(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-      .catch(() => {});
+    getDocs(collection(db, 'plantCatalog'))
+      .then(snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const active = items.filter((p: any) => p.active === true);
+        setPlantCatalog(active.length > 0 ? active : items);
+      })
+      .catch(console.error);
   }, []);
 
   const brands = Array.from(new Set(plantCatalog.map(p => p.brand))).sort();
