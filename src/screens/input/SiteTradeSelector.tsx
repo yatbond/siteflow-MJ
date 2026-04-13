@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { t } from '@/shared/i18n/i18n';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Site {
@@ -62,15 +62,31 @@ export default function SiteTradeSelector() {
     setError('');
 
     try {
+      // Create draft report in Firestore
+      const draftRef = await import('firebase/firestore').then(({ doc, setDoc }) => {
+        const id = crypto.randomUUID();
+        return setDoc(doc(db, 'draftReports', id), {
+          userId: user!.uid,
+          siteId: selectedSite,
+          tradeId: selectedTrade,
+          workDate,
+          status: 'draft',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          data: {},
+        }).then(() => id);
+      });
+
       navigate('/input/work-front', {
         state: {
+          draftId: draftRef,
           siteId: selectedSite,
           tradeId: selectedTrade,
           workDate,
         },
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to continue');
+      setError(err.message || 'Failed to create draft');
     } finally {
       setLoading(false);
     }
